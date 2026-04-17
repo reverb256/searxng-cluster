@@ -1,0 +1,66 @@
+{
+  "admin": {
+    "disabled": false
+  },
+  "logging": {
+    "logs": {
+      "file": {
+        "filename": "/var/log/caddy/access.log"
+      }
+    }
+  },
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [
+            ":8889"
+          ],
+          "routes": [
+            {
+              "handle": [
+                {
+                  "handler": "reverse_proxy",
+                  "upstreams": [
+                    {"dial": "localhost:7777"},
+                    {"dial": "localhost:7778"},
+                    {"dial": "localhost:7779"}
+                  ],
+                  "load_balancing": {
+                    "policy": "least_conn",
+                    "retries": 3
+                  },
+                  "headers": {
+                    "request": {
+                      "set": {
+                        "X-Forwarded-For": "{remote_host}",
+                        "X-Real-IP": "{remote_port}",
+                        "X-Forwarded-Proto": "{scheme}"
+                      }
+                    }
+                  },
+                  "transport": {
+                    "protocols": ["h2c", "h2", "http/1.1"],
+                    "compression": 0,
+                    "timeouts": {
+                      "read_duration": "30s",
+                      "dial_duration": "10s",
+                      "response_header_duration": "5s"
+                    },
+                    "keepalive": {
+                      "interval": 30,
+                      "idle_conns": 32
+                    },
+                    "keepalive": {
+                      "idle_conns_per_host": 8
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,110 @@
+---
+# Valkey (Redis-compatible) cache for SearXNG
+# LAN only, no authentication required
+# Scheduled on nexus per workload placement policy
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: valkey
+  namespace: search
+  labels:
+    app: valkey
+    component: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: valkey
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: valkey
+        component: cache
+    spec:
+      automountServiceAccountToken: false
+      nodeName: nexus
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: valkey
+        image: valkey/valkey:8.1
+        imagePullPolicy: IfNotPresent
+        command:
+        - valkey-server
+        - --save
+        - ""
+        - --appendonly
+        - "no"
+        - --bind
+        - "0.0.0.0"
+        - --port
+        - "6379"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - containerPort: 6379
+          name: valkey
+          protocol: TCP
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        readinessProbe:
+          exec:
+            command:
+            - valkey-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        livenessProbe:
+          exec:
+            command:
+            - valkey-cli
+            - ping
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: data
+        emptyDir:
+          medium: ""
+---
+# Valkey ClusterIP Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey
+  namespace: search
+  labels:
+    app: valkey
+    component: cache
+spec:
+  type: ClusterIP
+  selector:
+    app: valkey
+  ports:
+  - name: valkey
+    port: 6379
+    targetPort: 6379
+    protocol: TCP

@@ -1,0 +1,11 @@
+# SearXNG - Meta-search engine for the cluster
+# Accessible via Caddy ingress at search.cluster.local / search.lan
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: search
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted

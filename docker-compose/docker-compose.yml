@@ -1,0 +1,214 @@
+# SearXNG Multi-Instance Cluster
+# Provides load-balanced, scalable search with shared caching
+#
+# Architecture:
+#   - 3 SearXNG instances (ports 7777-7779)
+#   - 1 Valkey instance (shared cache)
+#   - 1 NGINX load balancer (port 8888)
+#
+# Usage:
+#   docker-compose up -d
+#   docker-compose logs -f
+#   docker-compose down
+
+services:
+  # ========================================================================
+  # SEARXNG INSTANCE 1 (Primary)
+  # ========================================================================
+  searxng-1:
+    image: docker.io/searxng/searxng:latest
+    container_name: searxng-1
+    hostname: searxng-1
+    restart: unless-stopped
+
+    ports:
+      - "7777:8080"
+
+    volumes:
+      # Persistent data (favicon cache, etc.)
+      - ./data/searxng-1:/var/cache/searxng
+
+    environment:
+      # Instance identification
+      - SEARXNG_INSTANCE_NAME=SearXNG-1
+      # Base URL for this instance
+      - SEARXNG_BASE_URL=http://localhost:7777
+      # Secret key (change in production!)
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-ultrasecretkey1}
+      # Redis connection (shared cache on host) - disabled for now
+      # - SEARXNG_VALKEY_URL=redis://host.docker.internal:6379/0
+      # Performance settings
+      - GRANIAN_MAX_THREADS=4
+      - GRANIAN_BACKLOG=2048
+      # Disable rate limiting and bot detection for internal use
+      - SEARXNG_LIMITER=false
+      - SEARXNG_UI_LIMIT_RATE=false
+      - SEARXNG_IMAGE_PROXY=true
+
+    networks:
+      - searxng-net
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========================================================================
+  # SEARXNG INSTANCE 2 (Secondary)
+  # ========================================================================
+  searxng-2:
+    image: docker.io/searxng/searxng:latest
+    container_name: searxng-2
+    hostname: searxng-2
+    restart: unless-stopped
+
+    ports:
+      - "7778:8080"
+
+    volumes:
+      - ./data/searxng-2:/var/cache/searxng
+
+    environment:
+      - SEARXNG_INSTANCE_NAME=SearXNG-2
+      - SEARXNG_BASE_URL=http://localhost:7778
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-ultrasecretkey2}
+      - SEARXNG_VALKEY_URL=redis://host.docker.internal:6379/0
+      - GRANIAN_MAX_THREADS=4
+      - GRANIAN_BACKLOG=2048
+      # Disable rate limiting and bot detection for internal use
+      - SEARXNG_LIMITER=false
+      - SEARXNG_UI_LIMIT_RATE=false
+      - SEARXNG_IMAGE_PROXY=true
+
+    networks:
+      - searxng-net
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========================================================================
+  # SEARXNG INSTANCE 3 (Tertiary)
+  # ========================================================================
+  searxng-3:
+    image: docker.io/searxng/searxng:latest
+    container_name: searxng-3
+    hostname: searxng-3
+    restart: unless-stopped
+
+    ports:
+      - "7779:8080"
+
+    volumes:
+      - ./data/searxng-3:/var/cache/searxng
+
+    environment:
+      - SEARXNG_INSTANCE_NAME=SearXNG-3
+      - SEARXNG_BASE_URL=http://localhost:7779
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-ultrasecretkey3}
+      - SEARXNG_VALKEY_URL=redis://host.docker.internal:6379/0
+      - GRANIAN_MAX_THREADS=4
+      - GRANIAN_BACKLOG=2048
+      # Disable rate limiting and bot detection for internal use
+      - SEARXNG_LIMITER=false
+      - SEARXNG_UI_LIMIT_RATE=false
+      - SEARXNG_IMAGE_PROXY=true
+
+    networks:
+      - searxng-net
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========================================================================
+  # NGINX LOAD BALANCER
+  # ========================================================================
+  nginx:
+    image: docker.io/nginx:alpine
+    container_name: nginx-lb
+    hostname: nginx-lb
+    restart: unless-stopped
+
+    ports:
+      - "8889:80"
+      - "8443:443"
+
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+
+    networks:
+      - searxng-net
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+    depends_on:
+      - searxng-1
+      - searxng-2
+      - searxng-3
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ============================================================================
+# NETWORKS
+# ============================================================================
+
+networks:
+  searxng-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# ============================================================================
+# VOLUMES (optional, for data persistence)
+# ============================================================================
+
+volumes:
+  searxng-1-data:
+  searxng-2-data:
+  searxng-3-data:

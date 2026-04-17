@@ -1,0 +1,43 @@
+# SearXNG Settings ConfigMap
+# Minimal config for private cluster use
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: searxng-settings
+  namespace: search
+data:
+  settings.yml: |
+    use_default_settings: true
+    server:
+      limiter: false
+      secret_key: "8a9ff4b9a424557eb3c53960110fa64fe4536ce7eb098b1a7aadf16a3bb38a90"
+      method: "GET"
+      port: 8080
+    bot_detection:
+      enabled: false
+    search:
+      formats:
+        - html
+        - json
+      language: en
+      safe_search: 0
+      max_request_timeout: 15.0
+    ui:
+      static_use_hash: true
+      default_theme: simple
+    engines:
+      - name: duckduckgo
+        paging: true
+        timeout: 10.0
+      - name: brave
+        paging: true
+        timeout: 10.0
+      - name: startpage
+        paging: true
+        timeout: 10.0
+      - name: wikipedia
+        timeout: 10.0
+      - name: stackoverflow
+        timeout: 10.0
+      - name: github
+        timeout: 10.0

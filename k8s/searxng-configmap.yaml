@@ -1,0 +1,92 @@
+apiVersion: v1
+data:
+  settings.yml: |
+    # SearXNG minimal configuration
+    use_default_settings: true
+    server:
+      limiter: false
+      secret_key: "${SEARXNG_SECRET}"
+      method: "GET"
+      port: 8080
+
+    # Completely disable limiter and rate limiting
+    limiter: false
+
+    # Completely disable bot detection
+    bot_detection:
+      enabled: false
+
+    # Additional bot detection modules to disable
+    limiter:
+      enabled: false
+
+    search:
+      formats:
+        - html
+        - json
+      language: en
+      safe_search: 0
+      # CRITICAL: Global timeout for all search requests (in seconds)
+      # This applies to each engine query
+      max_request_timeout: 14.0
+
+    # CRITICAL: Configure HTTP client timeouts
+    # These settings control how long SearXNG waits for search engines
+    client:
+      timeout: 12.0  # Total timeout for HTTP requests
+      connect_timeout: 5.0  # Time to establish connection
+      read_timeout: 8.0  # Time to read response
+
+    # Disable all access control for cluster use
+    ui:
+      static_use_hash: true
+      default_theme: simple
+
+    # Disable rate limiting completely
+    result_proxy:
+      enabled: false
+
+    engines:
+      # Bot-friendly engines with increased timeout
+      - name: duckduckgo
+        paging: true
+        timeout: 10.0  # Engine-specific timeout override
+
+      - name: brave
+        paging: true
+        timeout: 10.0
+
+      - name: startpage
+        paging: true
+        timeout: 10.0
+
+      - name: wikipedia
+        paging: true
+        timeout: 10.0
+
+      - name: stackoverflow
+        paging: true
+        timeout: 10.0
+
+      - name: github
+        paging: true
+        timeout: 10.0
+
+      # Disabled due to 403 errors
+      # - name: google
+      #   paging: true
+      # - name: bing
+      #   paging: true
+
+    # Disable limiter completely for API access
+    limiter: false
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","data":{"settings.yml":"# SearXNG minimal configuration\nuse_default_settings: true\nserver:\n  limiter: false\n  secret_key: \"${SEARXNG_SECRET}\"\n  method: \"GET\"\n  port: 8080\n\n# Completely disable limiter and rate limiting\nlimiter: false\n\n# Disable bot detection\nbot_detection:\n  enabled: false\n\nsearch:\n  formats:\n    - html\n    - json\n  language: en\n  safe_search: 0\n  # CRITICAL: Global timeout for all search requests (in seconds)\n  # This applies to each engine query\n  max_request_timeout: 14.0\n\n# CRITICAL: Configure HTTP client timeouts\n# These settings control how long SearXNG waits for search engines\nclient:\n  timeout: 12.0  # Total timeout for HTTP requests\n  connect_timeout: 5.0  # Time to establish connection\n  read_timeout: 8.0  # Time to read response\n\n# Disable all access control for cluster use\nui:\n  static_use_hash: true\n  default_theme: simple\n\n# Disable rate limiting completely\nresult_proxy:\n  enabled: false\n\nengines:\n  # Bot-friendly engines with increased timeout\n  - name: duckduckgo\n    paging: true\n    timeout: 10.0  # Engine-specific timeout override\n\n  - name: brave\n    paging: true\n    timeout: 10.0\n\n  - name: startpage\n    paging: true\n    timeout: 10.0\n\n  - name: wikipedia\n    paging: true\n    timeout: 10.0\n\n  - name: stackoverflow\n    paging: true\n    timeout: 10.0\n\n  - name: github\n    paging: true\n    timeout: 10.0\n\n  # Disabled due to 403 errors\n  # - name: google\n  #   paging: true\n  # - name: bing\n  #   paging: true\n\n# Disable limiter completely for API access\nlimiter: false\n"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"searxng-settings","namespace":"search"}}
+  creationTimestamp: "2026-03-22T16:39:59Z"
+  name: searxng-settings
+  namespace: search
+  resourceVersion: "1248038"
+  uid: f1109d68-65e3-43ed-90c2-f7b442b238a3

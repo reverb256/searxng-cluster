@@ -1,0 +1,62 @@
+# Network Policies for SearXNG
+# Implements defense-in-depth network segmentation
+
+---
+# Allow SearXNG to receive ingress traffic from ingress controller
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-searxng-ingress
+  namespace: search
+  labels:
+    app: searxng
+    policy: allow-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app: searxng
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow from ingress controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  # Allow from within cluster (internal services)
+  - from:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 8080
+---
+# Allow SearXNG to make outbound DNS queries only
+# No other egress allowed (search-only service)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-searxng-egress
+  namespace: search
+  labels:
+    app: searxng
+    policy: allow-egress
+spec:
+  podSelector:
+    matchLabels:
+      app: searxng
+  policyTypes:
+  - Egress
+  egress:
+  # DNS queries only
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
