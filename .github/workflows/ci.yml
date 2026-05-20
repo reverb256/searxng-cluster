@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Nix
+      uses: nixbuild/nix-quick-install-action@v23
+    
+    - name: Flake Check
+      run: nix flake check
+      
+    - name: Format Check
+      run: nixfmt --check .
